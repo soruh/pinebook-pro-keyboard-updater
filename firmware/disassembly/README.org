@@ -1,0 +1,340 @@
+# -*- eval: (add-hook 'after-save-hook (lambda nil (org-babel-tangle)) nil t); -*-
+
+* The trials and tribulations of the Pinebook Pro keyboard and touchpad
+
+The trackpad on the pinebook pro is sub-optimal, however I think this really is
+a symptom of poor support in linux and bad firmware so this serves to document
+my process in trying to improve it.
+
+The [[http://who-t.blogspot.com/][blog of Peter Hutterer]] who is pretty much the only active developer of
+libinput has been great reading for understanding how the linux input system
+fits together. Specifically the following posts are relevant:
+- [[http://who-t.blogspot.com/2016/09/understanding-evdev.html][Who-T: Understanding evdev]]
+- [[http://who-t.blogspot.com/2018/08/how-60-evdevhwdb-works.html][Who-T: How the 60-evdev.hwdb works]]
+- [[http://who-t.blogspot.com/2018/12/understanding-hid-report-descriptors.html][Who-T: Understanding HID report descriptors]]
+
+** relevant posts on the pine forum
+- [[https://forum.pine64.org/showthread.php?tid=8794][Touchpad, Keyboard, I2C oh my.]]
+- [[https://forum.pine64.org/showthread.php?tid=8884][Pinebook Pro Revised Keyboard Firmware]]
+- [[https://forum.pine64.org/showthread.php?tid=9094][Trackpad sluggish response]]
+
+** palm rejection
+Following the [[https://www.x.org/wiki/Events/XDC2015/Program/tissoires_input_debug_tools.html][excellent presentation]] ([[https://lwn.net/Articles/658948/][lwn article]])by Benjamin Tissoires who
+helps maintain the linux hid multitouch driver I started with the ~libinput~
+utilities. One thing I noticed running ~libinput record~ was that udev
+incorrectly reports trackpad dimensions of 30mm height and 48mm width which is
+off by a factor of two. This causes the trackpad resolution to be double what it
+should be for the ~ABS_MT_POSITION~ events. This is easily fixable in by adding
+the following entry to the evdev hwdb as a local rule
+(~/etc/udev/hwdb.d/99-local.hwdb~)
+
+#+begin_src conf
+evdev:input:b0003v258Ap001E*
+   EVDEV_ABS_00=::15
+   EVDEV_ABS_01=::15
+   EVDEV_ABS_35=::15
+   EVDEV_ABS_36=::15
+#+end_src
+
+The [[https://wayland.freedesktop.org/libinput/doc/latest/absolute-coordinate-ranges.html][~libinput measure touchpad-size~]] utility helped in generating this rule.
+
+This local override could be upstreamed to the [[https://cgit.freedesktop.org/systemd/systemd/tree/hwdb/60-evdev.hwdb][systemd evdev hwdb]] however since
+we have the ability to modify the trackpad firmware, I was [[https://github.com/jackhumbert/pinebook-pro-keyboard-updater/commit/90a251e91a7aeead558c20deaa2ebb9fc8cdc22c][able to fix]] the hid
+[[https://github.com/jackhumbert/pinebook-pro-keyboard-updater/blob/b405c75c093f2fdf8064f79de3f70ef1a6833632/firmware/usb_hid_ansi.txt#L89-L103][usage page that contained the incorrect dimensions]] by modifying the relevant
+portion of the firmware that contained the hid reports.
+
+The reason why this causes [[https://wayland.freedesktop.org/libinput/doc/latest/palm-detection.html][palm rejection on libinput]] to fail is due to [[https://gitlab.freedesktop.org/libinput/libinput/-/commit/d786b55daa99c6f891da05ec91617eccdc843333][this
+commit]] which disables palm detection on touchpads <= 55mm even though the user
+may have ~Option "DisableWhileTyping" "on"~ set ([[https://bbs.archlinux.org/viewtopic.php?id=218592][also see this]]).
+
+This also generally improves libinput's acceleration as it relies on the
+[[https://wayland.freedesktop.org/libinput/doc/latest/normalization-of-relative-motion.html#normalization-of-touchpad-coordinates][physical dimensions]].
+ 
+** ~MSC_TIMESTAMP~
+I also noticed that ~libinput record~ reported a ~SYN_REPORT~ every 8ms always
+containing at least a [[https://www.kernel.org/doc/html/latest/input/event-codes.html][~MSC_TIMESTAMP~]] with a value of 0 whenever a touch was
+present. This seemed wrong and indeed the [[https://www.kernel.org/doc/html/latest/input/event-codes.html][kernel documentation advises]] that "If
+the device does not provide this information, the driver must not provide it to
+user space". 
+
+In digging into this I found when that input code started being reported by the
+kernel's HID multitouch driver:
+- [[https://lore.kernel.org/patchwork/patch/340564/][[v4,14/14] HID: hid-multitouch: forwards MSC_TIMESTAMP - Patchwork]]
+  - Actual patch that made it in kernel: [[https://www.fclose.com/linux-kernels/29/cc/309-hid-hid-multitouch-forward-msc_timestamp][HID: hid-multitouch: forward MSC_TIMESTAMP - Linux Kernels]]
+- [[http://lkml.iu.edu/hypermail/linux/kernel/1805.3/06263.html][Linux-Kernel Archive: [PATCH] HID: multitouch: fix calculation of last slot field in multi-touch reports]]
+
+I first tried disabling this event code from affecting libinput by adding a
+[[https://wayland.freedesktop.org/libinput/doc/latest/device-quirks.html][device quirk]] ([[https://github.com/wayland-project/libinput/tree/master/quirks][quirks README]])to [[https://github.com/wayland-project/libinput/blob/cd5af1a4f6a58c9544e863bbe379cdc47b3d73d1/src/quirks.c#L275][disable]] that event code at
+~/etc/libinput/local-overrides.quirks~
+
+#+begin_src conf 
+[HAILUCK CO.,LTD USB KEYBOARD Touchpad]
+MatchVendor=0x258A
+MatchProduct=0x1E
+AttrEventCodeDisable=EV_MSC
+#+end_src
+
+This didn't seem to do much and indeed [[https://gitlab.freedesktop.org/libinput/libinput/-/blob/master/src/evdev.c#L2057-2066][libinput ignores the ~EV_MSC~ code]] by
+default but before I had figured that out I had gone as far as patching the the
+~hid_multitouch~ kernel module to not even report these events to libinput by
+simply [[https://github.com/torvalds/linux/blob/306d5acbfc66e7cccb4d8f91fc857206b8df80d1/drivers/hid/hid-multitouch.c#L808-L812][commenting]] [[https://github.com/torvalds/linux/blob/306d5acbfc66e7cccb4d8f91fc857206b8df80d1/drivers/hid/hid-multitouch.c#L921][out]] the lines pertaining to the ~MSC_TIMESTAMP~ code. 
+
+While its hard to objectively test touchpad performance I feel like patching the
+kernel made it a little bit better, perhaps because libinput wasn't being
+spammed with useless reports so latency was reduced a little bit.
+
+In any case the touchpad firmware (actually the keyboard firmware) isn't
+correctly reporting the [[https://github.com/jackhumbert/pinebook-pro-keyboard-updater/blob/b405c75c093f2fdf8064f79de3f70ef1a6833632/firmware/usb_hid.c#L182-L191][hid scan time usage field]]. Hopefully this can also be
+fixed in firmware however it isn't as simple as correcting an hid usage page as
+the reports are being sent with zeros in the [[https://github.com/torvalds/linux/blob/306d5acbfc66e7cccb4d8f91fc857206b8df80d1/include/linux/hid.h#L291][~HID_DG_SCANTIME~]] field instead of
+the correct hardware scan time.
+
+** Touchpad pointer time displacement bug
+While I had initially though that the misreporting of ~MSC_TIMESTAMP~ might be
+causing the [[https://github.com/jackhumbert/pinebook-pro-keyboard-updater/issues/12][frustrating time displacement issue]], my tests weren't appreciably
+improving the situation. So I tried to be more objective in measuring this bug.
+
+*** libevdev
+First I wrote a python script using the [[https://python-libevdev.readthedocs.io/en/latest/index.html][libevdev package]], which gets the same
+data from the kernel that libinput uses after going through the ~hid_multitouch~
+kernel driver.
+
+#+begin_src python :tangle scratch/libevdev-test.py
+import libevdev
+import sys
+
+fd = open('/dev/input/event4', 'rb')
+d = libevdev.Device(fd)
+
+x, sec, usec = 0, 0, 0
+while True:
+    for e in d.events():
+        if not e.matches(libevdev.EV_ABS.ABS_X):
+            continue
+        diff = e.value-x
+        tdiff = (e.sec - sec)*1000000 + (e.usec - usec)
+        #if diff > 0: print("         right")
+        #else: print("left")
+        print("{:5d}u {:5d}ms".format(diff, tdiff//1000))
+        x, sec, usec = e.value, e.sec, e.usec
+        #print(" "*(diff + 20) + "x")
+        #x = e.value
+        #print(" "*(e.value - 700) + "x")
+#+end_src
+
+When I move my finger to the right then stop for more than a second then move it
+to the left it shows something like the following:
+
+#+begin_example
+    4u    15ms
+    4u    23ms
+    3u    96ms
+    3u    88ms
+    2u  1767ms
+    2u    15ms
+    1u    48ms
+    1u     7ms
+    1u    24ms
+    1u    15ms
+    1u     7ms
+    1u     7ms
+   -1u    72ms
+   -1u   128ms
+   -1u   112ms
+   -1u    47ms
+#+end_example
+
+This clearly shows the hid multitouch kernel module sending reports that my
+finger started moving right then left after my 1.7 sec pause when in reality I
+only moved it left after the long pause. This rules out libinput or any other
+userspace touchpad library as a culprit (although I think the nonlinear behavior
+of libinput's adaptive profile may magnify the issue (as one can observe with
+~libinput debug-gui~).
+
+*** hidtools
+Going a bit deeper to rule out the kernel itself, I wrote the following python
+script using the [[https://gitlab.freedesktop.org/libevdev/hid-tools][hidtools package]].
+
+#+begin_src python :tangle scratch/hid-test.py
+import sys
+from hidtools.hidraw import HidrawDevice
+            
+x, sec, usec = 0, 0, 0
+with open('/dev/hidraw1', 'r+b') as fd:
+    dev = HidrawDevice(fd)
+    while True:
+        dev.read_events()
+        e = dev.events[-1]
+        report = dev.report_descriptor.get(e.bytes[0], len(e.bytes))
+        field = [f for f in report if f.usage_name == 'X'][0]
+        x_new = field.get_values(e.bytes)[0]
+        tdiff = (e.sec - sec)*1000000 + (e.usec - usec)
+        if x_new-x: 
+            print("{:5d}u {:5d}ms".format(x_new-x, tdiff//1000))
+            x, sec, usec = x_new, e.sec, e.usec
+#+end_src
+
+This grabs the raw hid events before the kernel processes them with a driver
+such as ~hid_multitouch~. I've observed the same time displacement bug with this
+script so that pretty much just leaves the firmware as the only culprit.
+
+I found the following commands useful in inspecting the kernel's parsing of the
+report descriptors compared to hid-tools.
+
+#+begin_src sh
+modinfo hid_multitouch
+cat /sys/kernel/debug/hid/*/rdesc # kernel's parsing of hid descriptors
+hid-decode /sys/class/input/event4/device/device/report_descriptor # hid-tools parsing of same descriptors
+hid-recorder
+#+end_src
+
+Also the [[https://github.com/torvalds/linux/blob/master/Documentation/input/multi-touch-protocol.rst][kernel's multitouch documentation]] is a helpful read along with the
+[[https://github.com/torvalds/linux/blob/master/drivers/hid/hid-multitouch.c#L1382][source itself]]. Finally it seems microsoft is the one who has actually proposed
+the majority of the HID protocol so [[https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/supporting-usages-in-digitizer-report-descriptors][their docs are the og reference]].
+
+** Reverse Engineering the Firmware
+Since we're left with the firmware as the culprit for our bad touchpad behavior,
+and since we have the firmware hex code with little chance the original source
+will be released, that leaves us with the task of reverse engineering it's ~12K
+bytes. Jack Humbert began this task mainly for the purpose of understanding the
+keyboard portion enough to create custom keymaps and fix some issues with
+function keys and the hardware kill switches. I'm attempting to expand that to
+the touchpad with the goal of fixing the annoying time displacement bug.
+
+*** Intel hex files
+The keyboard firmware was distributed as a [[https://en.wikipedia.org/wiki/Intel_HEX][~.hex~ file]] while the touchpad
+firmware was distributed as a binary. There's many tools to work with hex files
+such as the [[https://github.com/python-intelhex/intelhex/][python intelhex package]], [[https://sourceforge.net/p/sdcc/mailman/message/31781598/][sdcc's makebin]], and [[https://ftp.gnu.org/old-gnu/Manuals/binutils-2.12/html_node/binutils_5.html][gnu objcopy]]. The
+~updater~ tool in this repo even does its own hex to binary conversion before
+flashing the SH68F83 keyboard controller.
+
+I've checked that the ~updater~ hex to binary conversion is the same as the
+other tools with padding of empty spaces set to 0 (however makebin can only pad
+with 1's). However the ~updater~ tool does "fix" the hex file by setting moving
+three bytes from 0x37FB to 0x0000, which seems to set the main function executed
+on system init.
+
+*** Comparing hex files
+Jack Humbert found two other devices that use the SH68F83 chip for controlling a
+keyboard, the gpd p2 and [[http://gpd.hk/gpdp2max][gpd p2-max]] and their firmware is also available. After
+inspecting them (Emacs' ~hexl-mode~ is fantastic!) I suspected that the last 2KB
+were the same and I wrote the following script to confirm that:
+
+#+begin_src python :tangle scratch/compare_hex.py :shebang "#! /usr/bin/env nix-shell\n#! nix-shell -i python3 -p python3 python3Packages.intelhex"
+import sys
+import os
+from intelhex import IntelHex
+
+fw_paths = ["fw_iso.hex", "fw_ansi.hex", "fw_tp_update.hex",
+            "other-devices/gpd-p2.hex", "other-devices/gpd-p2-max.hex"]
+fws = [IntelHex(path) for path in fw_paths]
+#fw_iso = IntelHex("fw_iso.hex")
+#fw_ansi = IntelHex("fw_ansi.hex")
+#fw_tp_update = IntelHex("fw_tp_update.hex")
+
+#for name, fw in [("iso", fw_iso), ("ansi", fw_ansi), ("tp_update", fw_tp_update)]:
+for name, fw in zip(fw_paths, fws):
+    print("{:<30}: len={:>8} minaddr=0x{:x} maxaddr=0x{:x}".format(
+        name[:-4], len(fw), fw.minaddr(), fw.maxaddr()))
+
+for i in list(range(0x0000, 0x0043)) + list(range(0x3000, 0x4000)):
+    #if fw_ansi[i] != fw_iso[i] or fw_ansi[i] != fw_tp_update[i]:
+    if not all([fws[0][i] == fw[i] for fw in fws[1:]]):
+        bts = ["{}=0x{:x}".format(n[:-4], fw[i]) for n, fw in zip(fw_paths, fws)]
+        print("0x{:x}: ".format(i) + " ".join(bts))
+        #print("0x{:x}: ansi=0x{:x} iso=0x{:x} tp_update=0x{:x}".format(
+        #    i, fw_ansi[i], fw_iso[i], fw_tp_update[i]))
+
+# find hex line range for address greater than 0x3700
+idxs = list(range(106,235))
+with open("fw_ansi.hex", 'r') as f:
+    for i, l in enumerate(f):
+        if l[7:9] != '00': print(i, l)
+        if int(l[3:7], 16) > 0x3700: idxs.remove(i)
+print(idxs)
+#+end_src
+
+#+begin_src sh :results raw drawer :exports results
+scratch/compare_hex.py
+#+end_src
+
+#+begin_example
+fw_iso                        : len=   12277 minaddr=0x0 maxaddr=0x3fff
+fw_ansi                       : len=   12279 minaddr=0x0 maxaddr=0x3fff
+fw_tp_update                  : len=   12155 minaddr=0x0 maxaddr=0x3fff
+other-devices/gpd-p2          : len=    8995 minaddr=0x0 maxaddr=0x3fff
+other-devices/gpd-p2-max      : len=   11229 minaddr=0x0 maxaddr=0x3fff
+0x1c: fw_iso=0x24 fw_ansi=0x24 fw_tp_update=0x24 other-devices/gpd-p2=0x17 other-devices/gpd-p2-max=0x20
+0x1d: fw_iso=0xb2 fw_ansi=0xb4 fw_tp_update=0x38 other-devices/gpd-p2=0xd1 other-devices/gpd-p2-max=0x87
+0x37fc: fw_iso=0x11 fw_ansi=0x11 fw_tp_update=0x11 other-devices/gpd-p2=0x9 other-devices/gpd-p2-max=0x10
+0x37fd: fw_iso=0xa1 fw_ansi=0xa3 fw_tp_update=0x96 other-devices/gpd-p2=0x6a other-devices/gpd-p2-max=0xba
+888 :00000001FF
+
+[]
+#+end_example
+
+I suspected that this common part of the firmware at the end contained the
+firmware update mechanism given that it is identical across all the devices. The
+[[file:../SH68F83V2.0.pdf][SH68F83 documentation]] lists two ways of programming the chips 16K of flash: an
+In-Circuit Programming (ICP) mode that requires connecting directly to several of the
+chips pins which in the Pinebook Pro are connected to the keyboard and sending
+some undocumented waveform (we're refereed to the "Flash Programmer's user
+manual" but that's likely under NDA). The other is a Self Sector Programming
+(SSP) mode which allows a programming running from the chip flash to rewrite
+regions of the flash (although not the 1K sector the program is presumably being
+run from).
+
+The firmware update utility obviously must use the SSP and we are likely
+restricted to the same method which may potentially make it very risky to test
+new code on the firmware as it could enter an unrecoverable state that only the
+ICP method (which we don't have access to) could correct
+
+*** Disassembly
+We'll need good disassemblies of the hex files in order to get anywhere with
+reverse engineering. Here's a few tools which attempt to do that:
+- [[https://www.bipom.com/documents/dis51/d52manual.html][D51 - circa 2005]]
+- [[http://plit.de/asem-51/dis51.html][dis51 - circa 2003 and used by Jack Humbert to generate the .a51 disassemblies]]
+- [[https://sourceforge.net/p/sdcc/mailman/message/30408091/][mcs51-disasm.pl - circa 2013 and part of sdcc]]
+- [[https://github.com/8051Enthusiast/at51][at51 - actively developed]] (not a disassembler but a [[https://reverseengineering.stackexchange.com/questions/17601/reverse-engineering-8051-firmware][set of useful tools]])
+
+I've found ~mcs51-disasm.pl~ to be more useful than ~dis51~ and I haven't
+attempted to use ~D51~. The ~mcs51-disasm.pl~ disassemblies can be found in the
+corresponding ~*.mcs51~ files.
+
+The ~at51 libfind~ command was able to find the following functions:
+- ~?C?CLDPTR~
+- ~?C?CLDOPTR~
+- ~?C?CSTOPTR~
+- ~?C?ICALL~
+
+The ~mcs51-disasm.pl~ utility can be passed a custom header file from which it
+will pull names for the special function registers (sfrs) and special bits of
+those registers. Jack Humbert already wrote a ~sh68f83.h~ which I adapted in the
+capitalized version ~SH68F83.h~ to give better ~mcs51-disasm.pl~ output.  Also
+very useful is that ~mcs51-disasm.pl~ seems to catch the interrupts at the start
+of the firmware and labels them so.
+
+The ~mcs51-disasm.pl~ utility can be passed a namelist with address and function
+names (also variable names but I haven't gotten that far). I've been naming
+functions there as I start to understand what they do (also thanks to Jack
+Humbert for already tackling many functions in ~main.c~.
+
+Probably the most important function I've found is the ~SSP_start~ function
+which actually does the SSP steps outlined in p. 49 of the [[file:../SH68F83V2.0.pdf][SH68F83 documentation]]
+so we can be fairly certain that's how the firmware updater utility is flashing
+new firmware although there is still much to learn in the details such as how it
+signals over usb for the flashing process to start.
+
+
+*** Going forward
+I'm making slow but steady progress understanding the flashing portion of the
+firmware above 0x3800 (interestingly my name - AKIRA - appearing at 0x3FBA seems
+to be used for some state check). I think this is the most important thing to
+understand right now as how this happens will determine how safe it might be to
+flash untested code. I certainly wouldn't want to brick my keyboard and touchpad
+as fixing it at this point would require a new mainboard.
+
+As part of this I'm looking at rewriting the ~updater~ utility in python to
+better understand the usb portion of the update and make that process less
+opaque.
+
