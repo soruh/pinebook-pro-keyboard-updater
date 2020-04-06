@@ -34,7 +34,14 @@ static int convert()
 
   rc = convert_hex_data(
     firmware_fw_iso_hex, firmware_fw_iso_hex_len,
-    "fw.bin");
+    "fw_iso.bin");
+  if (rc < 0) {
+    return rc;
+  }
+
+  rc = convert_hex_data(
+    firmware_fw_ansi_hex, firmware_fw_ansi_hex_len,
+    "fw_ansi.bin");
   if (rc < 0) {
     return rc;
   }
