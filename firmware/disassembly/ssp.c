@@ -24,20 +24,15 @@ void main(void) { //0x3800: System_init:
  Label_004: //0x3829:
     P4CON = 0x60;
     P4 = 0x7F;
-    ACC = ROM[0x37FE];
-    ACC ^= 0x5A;
-    if (ACC == 0) goto Label_003; //then jumps (backward): 0x3827
+    if (ROM[0x37FE] ^ 0x5A == 0) goto Label_003; //then jumps (backward): 0x3827
 
  Label_008: //0x386F:
     load_akira_to_0x20(); //Calls (backward) this: 0x384E (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x004E)
-    ACC = 0x14;
 
-    do { //0x3873: Label_009:
-
+    for (uint8_t i = 0x14; i != 0; --i) {// i in ACC and loop at //0x3873: Label_009:
         if (P4_5 == 1) goto Label_004; // then jumps (backward): 0x3829
         if (P4_6 == 0) goto Label_004; // then jumps (backward): 0x3829
-        --ACC;
-    } while (ACC != 0); // then jumps (backward): 0x3873 // Label_009
+    } //while (ACC != 0); // then jumps (backward): 0x3873 // Label_009
 
     P4CON = 0;
     R0 = 0;
@@ -85,7 +80,99 @@ void main(void) { //0x3800: System_init:
     if (!P4_5 || !P4_6) {
         //if (P4_5 == 1) then jumps (forward): 0x38B9 // Label_018
         //if (P4_6 == 1) then jumps (forward): 0x38B9 // Label_018
-        goto Label_042; //Jumps (forward): 0x39A6 (PC += 2, PC(10-0) = 0x01A6) //
+        //goto Label_042; //Jumps (forward): 0x39A6 (PC += 2, PC(10-0) = 0x01A6)
+        //0x39A6: Label_042 moved here
+        P4_6 = 0;
+        PREWDT = 0x03;
+        SP = 0x27;
+        //Calls (forward) this: 0x3A30 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0230)
+        R2<#2> = 0x05;
+
+        while (true) { //0x39B3: Label_043:
+            P4 = 0xFF;
+
+            do { //0x39B6: Label_044:
+                CLRWDT = 0x55;
+            } while (P4_5); //then jumps (backward): 0x39B6 // Label_044
+
+            if (P4_6) {//if (P4_6 == 0) then jumps (forward): 0x39C6 // Label_046
+                P4_6 = 0;
+
+                while (!P4_5) { //0x39C1: Label_045:
+                } //Jumps (backward): 0x39C1 (PC += 2, PC(10-0) = 0x01C1) // Label_045
+                continue;// then jumps (backward): 0x39B3 // Label_043
+            }// 0x39C6: Label_046:
+
+            ACC = 0x02;
+            //Calls (forward) this: 0x3A22 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0222)
+            if (ACC == 0x33) { //if (ACC != 0x33) then jumps (forward): 0x39DD // Label_047
+                //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
+                R4 = ACC;
+                //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
+                R5 = ACC;
+                if (R5 != 0x5A) continue; // then jumps (backward): 0x39B3 // Label_043
+                if (R4 != 0) continue; // then jumps (backward): 0x39B3 // Label_043
+
+                //Calls (forward) this: 0x3F1B (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x071B)
+                continue; //Jumps (backward): 0x39B3 (PC += 2, PC(10-0) = 0x01B3) // Label_043
+            } //0x39DD: Label_047:
+
+            if (ACC == 0x55) { //if (ACC != 0x55) then jumps (forward): 0x39F6 // Label_050
+                R1 = 0x08;
+                R2 = 0x08;
+
+                do { //0x39E4: Label_048:
+                    //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
+                    *R1 = ACC;
+                    ++R1;
+                } while (--R2 != 0); // then jumps (backward): 0x39E4 // Label_048
+
+                R1 = 0x08;
+                R2 = 0x08;
+
+                do { //0x39EE: Label_049:
+                    ACC = *R1;
+                    //Calls (forward) this: 0x3DC4 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x05C4)
+                    ++R1;
+                } while (--R2 != 0); // then jumps (backward): 0x39EE // Label_049
+
+                continue; //Jumps (backward): 0x39B3 (PC += 2, PC(10-0) = 0x01B3) // Label_043
+            }
+
+            while (ACC != 0x66) {// 0x39F6: Label_050:
+            } //then jumps: 0x39F6 // Label_050
+
+            //Calls (forward) this: 0x3C37 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0437)
+
+            while (ACC != 0) {//0x39FB: Label_051:
+            }//then jumps: 0x39FB // Label_051
+
+            R2 = 0x08;
+
+            do { //0x39FF: Label_052:
+                //Calls (forward) this: 0x3E8D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x068D)
+                CLRWDT = 0x55;
+                CY = 1;
+                P4 = 0xFF;
+
+                do { //0x3A08: Label_053:
+                    if (!P4_5) continue; //then jumps: 0x3A08 (waiting loop) // Label_053
+                    while (P4_5) { //0x3A0B: Label_054:
+                    } //then jumps: 0x3A0B (waiting loop) // Label_054
+
+                    ACC[76543210] = ACC[6543210C];
+                    CY = ACC[7];
+                    P4_6 = CY;
+                    CY = 0;
+                } while (ACC); // then jumps (backward): 0x3A08 // Label_053
+
+                while (!P4_5) { //0x3A14: Label_055:
+                } //then jumps: 0x3A14 (waiting loop) // Label_055
+
+                P4_6 = 0;
+            } while (--R2 != 0);// then jumps (backward): 0x39FF // Label_052
+
+        } // Jumps (backward): 0x39B3 (PC += 2, PC(10-0) = 0x01B3) // Label_043
     } //0x38B9: Label_018:
 
     SP = 0x27;
@@ -137,15 +224,12 @@ void main(void) { //0x3800: System_init:
 
     CLRWDT = 0x55;
     ACC = IF2;
-    if (ACC_0) { //if (ACC_0 == 0) then jumps (forward): 0x394B // Label_031
-
+    if (ACC_0 == 0) { //if (IF2 & STUP) //if (ACC_0 == 0) then jumps (forward): 0x394B // Label_031
         IF2 &= 0xFE;
 
     Label_027: //0x3913: 
 
-        ACC = RXFLG0;
-        ACC &= 0x18;
-        if (!ACC) {//if (ACC != 0) then jumps (forward): 0x3935 // Label_028
+        if (!(RXFLG0 & 0x18)) {//if (ACC != 0) then jumps (forward): 0x3935 // Label_028
             //Calls (forward) this: 0x3B53 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0353)
             if (R3 != 0x08) goto Label_029; // if (R3 != 0x08 {'\b'}) then jumps (forward): 0x393E // Label_029
             RXFLG0 |= 0x04;
@@ -187,16 +271,11 @@ void main(void) { //0x3800: System_init:
             //Calls (forward) this: 0x3B61 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0361)
             //Jumps (forward): 0x3970 (PC += 2, PC(10-0) = 0x0170) // Label_035
         } else { //0x3963: Label_033:
-            ACC = R0_2;
-
-            if (ACC == 0x01) {//if (ACC != 0x01) then jumps (forward): 0x396E // Label_034
-                ACC = R2_1;
-                DADDR = ACC;
-                //if (ACC == 0) then jumps (forward): 0x396E // Label_034 (no op???)
+            if (R0_2 == 0x01) {//if (ACC != 0x01) then jumps (forward): 0x396E // Label_034
+                DADDR = R2_1;
+                //ACC = R2_1 so if (ACC == 0) then jumps (forward): 0x396E // Label_034 (no op???)
             } //0x396E: Label_034:
-
             //Calls (forward) this: 0x3BF1 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x03F1)
-
         } //0x3970: Label_035:
 
         RXFLG0 &= 0xFB;
@@ -205,128 +284,30 @@ void main(void) { //0x3800: System_init:
 
     if (ACC_4) { //if (ACC_4 == 0) then jumps (forward): 0x39A4 // Label_041
         IF2 &= 0xEF;
-        if (RXFLG0 & R0_OW) goto Label_039; ////if (ACC_4 == 1) then jumps (forward): 0x3994 // Label_039
+        if (RXFLG0 & R0_OW) { //if (ACC_4 == 1) then jumps (forward): 0x3994 // Label_039
+            //0x3994: Label_039 moved here
+            *r33 = 1;
+            goto Label_029; // Jumps (backward): 0x393E (PC += 2, PC(10-0) = 0x013E) // Label_029
+        } 
 
         RXFLG0 |= 0x04;
         if (!*r31) { //if ([0x31] == 1) then jumps (forward): 0x398A // Label_037
-            if (RXCNT0 != 0) goto Label_040; //if (ACC != 0) then jumps (forward): 0x3998 // Label_040
-        } //0x398A: Label_037:
-
-        RXFLG0 &= 0xFE;
-        //Calls (forward) this: 0x3BF1 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x03F1)
-
-        while (true) { //0x398F: Label_038:
-            RXFLG0 &= 0xFB;
-            goto Label_023; //Jumps (backward): 0x38FC (PC += 2, PC(10-0) = 0x00FC) // Label_023
-
-        Label_039: //0x3994: Label_039:
-            *r33 = 1;
-            goto Label_029; // Jumps (backward): 0x393E (PC += 2, PC(10-0) = 0x013E) // Label_029
-
-        Label_040: //0x3998: Label_040:
-
-            //Calls (forward) this: 0x3B53 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0353)
-            RXFLG0 |= 0x04;
+            if (RXCNT0 != 0) { //if (ACC != 0) then jumps (forward): 0x3998 // Label_040
+                //0x3998: Label_040 moved here
+                //Calls (forward) this: 0x3B53 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0353)
+                RXFLG0 |= 0x04;
+                RXFLG0 &= 0xFE;
+                //Calls (forward) this: 0x3BAD (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x03AD)
+            } //Jumps (backward): 0x398F (PC += 2, PC(10-0) = 0x018F) // Label_038
+        } else { //0x398A: Label_037 (as else allows above to jump to 0x398F: Label_038)
             RXFLG0 &= 0xFE;
-            //Calls (forward) this: 0x3BAD (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x03AD)
-        } //Jumps (backward): 0x398F (PC += 2, PC(10-0) = 0x018F) // Label_038
+            //Calls (forward) this: 0x3BF1 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x03F1)
+        } //0x398F: Label_038:
+        RXFLG0 &= 0xFB;
+        goto Label_023; //Jumps (backward): 0x38FC (PC += 2, PC(10-0) = 0x00FC) // Label_023
     } //0x39A4: Label_041:
 
     goto Label_023; // Jumps (backward): 0x38FC (PC += 2, PC(10-0) = 0x00FC) // Label_023
-
- Label_042: //0x39A6: 
-    P4_6 = 0;
-    PREWDT = 0x03;
-    SP = 0x27;
-    //Calls (forward) this: 0x3A30 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0230)
-    R2<#2> = 0x05;
-
-    while (true) { //0x39B3: Label_043:
-        P4 = 0xFF;
-
-        do { //0x39B6: Label_044:
-            CLRWDT = 0x55;
-        } while (P4_5); //then jumps (backward): 0x39B6 // Label_044
-
-        if (P4_6) {//if (P4_6 == 0) then jumps (forward): 0x39C6 // Label_046
-            P4_6 = 0;
-
-            while (!P4_5) { //0x39C1: Label_045:
-            } //Jumps (backward): 0x39C1 (PC += 2, PC(10-0) = 0x01C1) // Label_045
-            continue;// then jumps (backward): 0x39B3 // Label_043
-        }// 0x39C6: Label_046:
-
-        ACC = 0x02;
-        //Calls (forward) this: 0x3A22 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0222)
-        if (ACC == 0x33) { //if (ACC != 0x33) then jumps (forward): 0x39DD // Label_047
-            //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
-            R4 = ACC;
-            //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
-            R5 = ACC;
-            if (R5 != 0x5A) continue; // then jumps (backward): 0x39B3 // Label_043
-            if (R4 != 0) continue; // then jumps (backward): 0x39B3 // Label_043
-
-            //Calls (forward) this: 0x3F1B (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x071B)
-            continue; //Jumps (backward): 0x39B3 (PC += 2, PC(10-0) = 0x01B3) // Label_043
-        } //0x39DD: Label_047:
-
-        if (ACC == 0x55) { //if (ACC != 0x55) then jumps (forward): 0x39F6 // Label_050
-            R1 = 0x08;
-            R2 = 0x08;
-
-            do { //0x39E4: Label_048:
-            //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
-                *R1 = ACC;
-                ++R1;
-            } while (--R2 != 0); // then jumps (backward): 0x39E4 // Label_048
-
-            R1 = 0x08;
-            R2 = 0x08;
-
-            do { //0x39EE: Label_049:
-                ACC = *R1;
-                //Calls (forward) this: 0x3DC4 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x05C4)
-                ++R1;
-            } while (--R2 != 0); // then jumps (backward): 0x39EE // Label_049
-
-            continue; //Jumps (backward): 0x39B3 (PC += 2, PC(10-0) = 0x01B3) // Label_043
-        }
-
-        while (ACC != 0x66) {// 0x39F6: Label_050:
-        } //then jumps: 0x39F6 // Label_050
-
-        //Calls (forward) this: 0x3C37 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0437)
-
-        while (ACC != 0) {//0x39FB: Label_051:
-        }//then jumps: 0x39FB // Label_051
-
-        R2 = 0x08;
-
-        do { //0x39FF: Label_052:
-            //Calls (forward) this: 0x3E8D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x068D)
-            CLRWDT = 0x55;
-            CY = 1;
-            P4 = 0xFF;
-
-            do { //0x3A08: Label_053:
-                if (!P4_5) continue; //then jumps: 0x3A08 (waiting loop) // Label_053
-
-                while (P4_5) { //0x3A0B: Label_054:
-                } //then jumps: 0x3A0B (waiting loop) // Label_054
-
-                ACC[76543210] = ACC[6543210C];
-                CY = ACC[7];
-                P4_6 = CY;
-                CY = 0;
-            } while (ACC); // then jumps (backward): 0x3A08 // Label_053
-
-            while (!P4_5) { //0x3A14: Label_055:
-            } //then jumps: 0x3A14 (waiting loop) // Label_055
-
-            P4_6 = 0;
-        } while (--R2 != 0);// then jumps (backward): 0x39FF // Label_052
-
-    } // Jumps (backward): 0x39B3 (PC += 2, PC(10-0) = 0x01B3) // Label_043
 } // end main
 
 
