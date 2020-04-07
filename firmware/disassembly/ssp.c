@@ -6,16 +6,9 @@ void main(void) { //0x3800: System_init:
         goto Label_008;
     }
     if (MODE_FG & USBRST ||
-        *r20 != 'A' || *r20 != *r21 || *r21 != 'K' ||
-        *r22 != 'I' || *r23 != 'R') {
-        if (ROM[0x37FB] == 0x02) {
-            ACC = 0;
-            B = 0;
-            DPTR = 0x0000;
-            SP = 0x07;
-            PSW = 0;
-            goto Label_000; // Jumps (backward): 0x37FB
-        } // else {} // jumps (backward): 0x3827 // Label_003
+        *r20 != 'A' || *r21 != 'K' || *r22 != 'I' || *r23 != 'R' ||
+        *r24 != *r20 /*'A'*/) {
+        goto Label_005;
     }
 
     //0x3827: Label_003: 
@@ -25,20 +18,27 @@ void main(void) { //0x3800: System_init:
     P4CON = 0x60;
     P4 = 0x7F;
     if (ROM[0x37FE] ^ 0x5A == 0) goto Label_020; //then jumps (backward): 0x3827 // Label_003 -> Label_020
+ Label_005: //0x3838: //ajmp from 0x3BCC
+    if (ROM[0x37FB] == 0x02) {
+        ACC = 0;
+        B = 0;
+        DPTR = 0x0000;
+        SP = 0x07;
+        PSW = 0;
+        goto Label_000; // Jumps (backward): 0x37FB
+    } goto Label_020; //then jumps (backward): 0x3827 // Label_003 -> Label_020
 
  Label_008: //0x386F:
     load_akira_to_0x20(); //Calls (backward) this: 0x384E (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x004E)
 
-    for (uint8_t i = 0x14; i != 0; --i) {// i in ACC and loop at //0x3873: Label_009:
+    for (uint8_t i = 0x14; i != 0; --i) { // i in ACC and loop at //0x3873: Label_009
         if (P4_5 == 1) goto Label_004; // then jumps (backward): 0x3829
         if (P4_6 == 0) goto Label_004; // then jumps (backward): 0x3829
     } //while (ACC != 0); // then jumps (backward): 0x3873 // Label_009
 
     P4CON = 0;
     R0 = 0;
-    ACC = 0x14;
-
-    do { //0x3881: Label_010:
+    for (uint8_t i = 0x14; i != 0; --i) { // i in ACC and loop at //0x3881: Label_010
         P4 = 0xDF;
         while (--R0 != 0) { //0x3884: Label_011:
         } //then jumps: 0x3884 (waiting loop) // Label_011
@@ -54,25 +54,25 @@ void main(void) { //0x3800: System_init:
 
         P4 = 0xFF;
 
-        while (--R0 != 0) {//0x3894: Label_013:
+        while (--R0 != 0) { //0x3894: Label_013:
         } //then jumps: 0x3894 (waiting loop) // Label_013
 
         if (P4_5 == 0) goto Label_004; // then jumps (backward): 0x3829
 
-        if (ACC == 0x0A) { //if (ACC != 0x0A {'\n'}) then jumps (forward): 0x389E // Label_014
+        if (i == 0x0A) { //if (ACC != 0x0A {'\n'}) then jumps (forward): 0x389E // Label_014
             R5_3 = 0x0A;
         } // 0x389E: Label_014:
 
-        if (ACC == 0x11) { //if (ACC != 0x11) then jumps (forward): 0x38A4 // Label_015
+        if (i == 0x11) { //if (ACC != 0x11) then jumps (forward): 0x38A4 // Label_015
             R6_3 = 0x09; // {'\t'}
         } //0x38A4: Label_015:
 
-        if (ACC == 0x06) { //if (ACC != 0x06) then jumps (forward): 0x38A9 // Label_016
+        if (i == 0x06) { //if (ACC != 0x06) then jumps (forward): 0x38A9 // Label_016
             R7_3 = 0x06;
         } //0x38A9: Label_016:
 
         CLRWDT = 0x55;
-    } while (--ACC != 0); //then jumps (backward): 0x3881 // Label_010
+    } //while (--ACC != 0); //then jumps (backward): 0x3881 // Label_010
 
     while (--R0 != 0) { //0x38AF: Label_017:
     } //then jumps: 0x38AF (waiting loop) // Label_017
@@ -198,7 +198,7 @@ void main(void) { //0x3800: System_init:
     P4 = 0x7F;
 
     if (MODE_FG & 0x0A) {//if (ACC == 0) then jumps (forward): 0x38F4 // Label_022
-        //Label_021: //0x38EA:  // called from 0x3F19
+        //Label_021: //0x38EA:  //ajmp from 0x3F19
 
         DFC = 0x01;
         load_akira_to_0x20(); //Calls (backward) this: 0x384E (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x004E)
