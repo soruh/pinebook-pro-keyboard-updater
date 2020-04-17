@@ -60,7 +60,7 @@ void main(void) { //0x3800: System_init:
             P4_6 = 0;
             PREWDT = 0x03;
             SP = 0x27;
-            //Calls (forward) this: 0x3A30 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0230)
+            zero_everything(); //Calls (forward) this: 0x3A30
             R2<#2> = 0x05;
 
             while (true) { //0x39B3: Label_043:
@@ -79,11 +79,11 @@ void main(void) { //0x3800: System_init:
                 }// 0x39C6: Label_046:
 
                 ACC = 0x02;
-                //Calls (forward) this: 0x3A22 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0222)
+                goto Label_056; //usb_start()+2; // Calls (forward) this: 0x3A22
                 if (ACC == 0x33) { //if (ACC != 0x33) then jumps (forward): 0x39DD // Label_047
-                    //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
+                    usb_start(); //Calls (forward) this: 0x3A1D
                     R4 = ACC;
-                    //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
+                    usb_start(); //Calls (forward) this: 0x3A1D
                     R5 = ACC;
                     if (R5 != 0x5A) continue; // then jumps (backward): 0x39B3 // Label_043
                     if (R4 != 0) continue; // then jumps (backward): 0x39B3 // Label_043
@@ -97,7 +97,7 @@ void main(void) { //0x3800: System_init:
                     R2 = 0x08;
 
                     do { //0x39E4: Label_048:
-                        //Calls (forward) this: 0x3A1D (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x021D)
+                        usb_start(); //Calls (forward) this: 0x3A1D
                         *R1 = ACC;
                         ++R1;
                     } while (--R2 != 0); // then jumps (backward): 0x39E4 // Label_048
@@ -199,15 +199,15 @@ void main(void) { //0x3800: System_init:
     P4 = 0x7F;
 
     if (MODE_FG & 0x0A) {//if (ACC == 0) then jumps (forward): 0x38F4 // Label_022
-        //Label_021: //0x38EA:  //ajmp from 0x3F19
+        Label_021: //0x38EA:  //ajmp from 0x3F19
 
         DFC = 0x01;
-        load_akira_to_0x20(); //Calls (backward) this: 0x384E (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x004E)
+        load_akira_to_0x20(); //Calls (backward) this: 0x384E
         //Calls (forward) this: 0x3ECF (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x06CF)
         DFC = 0xC2;
     } //0x38F4: Label_022:
     
-    //Calls (forward) this: 0x3A30 (PC += 2, [++SP] = PCL, [++SP] = PCH, PC(10-0) = 0x0230)
+    zero_everything(); //Calls (forward) this: 0x3A30
     DFC = 0xCA;
     PREWDT = 0x03;
 
@@ -344,4 +344,56 @@ void load_0x37FF_to_0x27(void) { //0x3861
     R7_3 = 0;
     *r27 = ROM[0x37FF];
     return; //ret //PCH = [SP--], PCL = [SP--]
+}
+
+void usb_start(void) { //0x3A1D
+    P4 = 0xFF;
+    ACC = 0x01;
+
+ Label_056: //0x3A22  // called from 0x39C8
+    while (!P4_5) {} //then jumps: 0x3A22 (waiting loop)
+
+    while (P4_5) {} // 0x3A25 // then jumps: 0x3A25 (waiting loop) //Label_057
+
+    CY = P4_6;
+    ACC[76543210] = ACC[6543210C]; CY = ACC[7];
+
+    if (!CY) goto Label_056; //then jumps (backward): 0x3A22
+
+    P4_6 = 0;
+    return; //PCH = [SP--], PCL = [SP--]
+}
+
+void zero_everything(void) { //0x3A30
+    ACC = 0;
+    MODE_FG = 0;
+    DADDR = 0;
+    *r26 = 0;
+    R0 = 0x18;
+
+    do { //Label_058: //0x3A39:
+    *R0 = 0;
+    } while (--R0 != 0); //[then jumps (backward): 0x3A39 //Label_058
+
+    IE = 0;
+    IE2 = 0;
+    IRQEN = 0;
+    IRQEN2 = 0;
+    IP = 0;
+    IP2 = 0;
+    IF = 0;
+    IF2 = 0;
+    IRQFG = 0;
+    IRQFG2 = 0;
+    WKT_CON = 0;
+    P0CON = 0;
+    P1CON = 0;
+    P2CON = 0;
+    P3CON = 0;
+    --ACC; // underflow to 0xFF
+    P0 = 0xFF;
+    P1 = 0xFF;
+    P2 = 0xFF;
+    P3 = 0xFF;
+    return; //PCH = [SP--], PCL = [SP--]
 }

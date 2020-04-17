@@ -234,7 +234,7 @@ CSEG AT 007Bh
   00FC 00           DB 000h 
   00FD 12           DB 012h ; bLength -- start device descriptor
   00FE 01           DB 001h ; bDescritorType
-  00FF 10           DB 010h ; bcdHID
+  00FF 10           DB 010h ; bcdUSB
   0100 01           DB 001h ; *
   0101 00           DB 000h ; class
   0102 00           DB 000h ; subclass
@@ -1085,7 +1085,7 @@ CSEG AT 007Bh
   044F 01           DB 001h ;   bNumDescriptors
   0450 22           DB 022h ;   bDescriptorType (Report)
   0451 41           DB 041h ;   wDescriptorLength
-  0452 00           DB 000h ; ?
+  0452 00           DB 000h ;   *
   0453 07           DB 007h ; bLength
   0454 05           DB 005h ; bDescriptorType
   0455 81           DB 081h ; bEndpointAddress (EP 1 IN)
@@ -8380,37 +8380,37 @@ L0555:
   3F28 B1AE  		ACALL L0556
   3F2A C1CF  		AJMP L0007
 
-  3F2C 12    		DB 012h 
-  3F2D 01    		DB 001h 
-  3F2E 10    		DB 010h 
-  3F2F 01    		DB 001h 
-  3F30 00    		DB 000h 
-  3F31 00    		DB 000h 
-  3F32 00    		DB 000h 
-  3F33 08    		DB 008h 
-  3F34 03    		DB 003h 
-  3F35 06    		DB 006h 
-  3F36 20    		DB 020h ; ' '
-  3F37 10    		DB 010h 
-  3F38 01    		DB 001h 
-  3F39 03    		DB 003h 
-  3F3A 00    		DB 000h 
-  3F3B 00    		DB 000h 
-  3F3C 00    		DB 000h 
-  3F3D 01    		DB 001h 
-  3F3E 04    		DB 004h 
-  3F3F 03    		DB 003h 
+  3F2C 12    		DB 012h ; bLength -- start device descriptor
+  3F2D 01    		DB 001h ; bDescritorType
+  3F2E 10    		DB 010h ; bcdUSB
+  3F2F 01    		DB 001h ; *
+  3F30 00    		DB 000h ; class
+  3F31 00    		DB 000h ; subclass
+  3F32 00    		DB 000h ; protocol
+  3F33 08    		DB 008h ; max packet size
+  3F34 03    		DB 003h ; vendor id
+  3F35 06    		DB 006h ; *
+  3F36 20    		DB 020h ; product id
+  3F37 10    		DB 010h ; *
+  3F38 01    		DB 001h ; bcd device version
+  3F39 03    		DB 003h ; *
+  3F3A 00    		DB 000h ; manf string i
+  3F3B 00    		DB 000h ; product string i
+  3F3C 00    		DB 000h ; serial number
+  3F3D 01    		DB 001h ; configurations
+  3F3E 04    		DB 004h ; bLength  (String Descriptor)
+  3F3F 03    		DB 003h ; bDescriptorType
   3F40 09    		DB 009h 
   3F41 04    		DB 004h 
-  3F42 09    		DB 009h 
-  3F43 02    		DB 002h 
-  3F44 22    		DB 022h ; '"'
-  3F45 00    		DB 000h 
-  3F46 01    		DB 001h 
-  3F47 01    		DB 001h 
-  3F48 00    		DB 000h 
-  3F49 A0    		DB 0A0h 
-  3F4A 32    		DB 032h
+  3F42 09    		DB 009h ; bLength  (Configuration Descriptor)
+  3F43 02    		DB 002h ; bDescriptorType
+  3F44 22    		DB 022h ; wTotalLength
+  3F45 00    		DB 000h ; *
+  3F46 01    		DB 001h ; bNumInterfaces
+  3F47 01    		DB 001h ; bConfigurationValue
+  3F48 00    		DB 000h ; iConfiguration
+  3F49 A0    		DB 0A0h ; bmAttributes
+  3F4A 32    		DB 032h ; MaxPower
   3F4B 09    		DB 009h ; bLength (an old configuration descriptor?)
   3F4C 04    		DB 004h ; bDescriptorType
   3F4D 00    		DB 000h ; bInterfaceNumber
@@ -8428,7 +8428,7 @@ L0555:
   3F59 01    		DB 001h ;   bNumDescriptors
   3F5A 22    		DB 022h ;   bDescriptorType (Report)
   3F5B 48    		DB 048h ;   DescriptorLength
-  3F5C 00    		DB 000h ; ?
+  3F5C 00    		DB 000h ;   *
   3F5D 07    		DB 007h ; bLength
   3F5E 05    		DB 005h ; bDescriptorType
   3F5F 81    		DB 081h ; bEndpointAddress EP 1 IN

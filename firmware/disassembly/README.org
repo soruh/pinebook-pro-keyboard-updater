@@ -273,6 +273,8 @@ other-devices/gpd-p2-max      : len=   11229 minaddr=0x0 maxaddr=0x3fff
 []
 #+end_example
 
+*** JTAG and Self Sector Programming
+
 I suspected that this common part of the firmware at the end contained the
 firmware update mechanism given that it is identical across all the devices. The
 [[file:../SH68F83V2.0.pdf][SH68F83 documentation]] lists two ways of programming the chips 16K of flash: an
@@ -289,15 +291,22 @@ restricted to the same method which may potentially make it very risky to test
 new code on the firmware as it could enter an unrecoverable state that only the
 ICP method (which we don't have access to) could correct
 
+I found a question on the [[https://electronics.stackexchange.com/questions/177632/extracting-firmware-using-jtag][Electrical Engineering stackexchange]] which asks about
+another Sino Wealth microcontroller that appears to be similar to our
+SH68F83. The one and only answer makes me question +my sanity+ how easy this may
+be. However on the bright side they did [[https://www.aliexpress.com/store/product/JET51A-8051-emulator-kernel-programmer-programming-dedicated-8-bit-microcontroller-simulation/1678083_32764660843.html][link to the JET51 programmer]] which
+appears to be the JTAG device necessary to use the ICP function of the pretty
+much all Sino Wealth 8051 based MCUs including our SH68F83.
+
 *** Disassembly
-We'll need good disassemblies of the hex files in order to get anywhere with
-reverse engineering. Here's a few tools which attempt to do that:
+We-ll need good disassemblies of the hex files in order to get anywhere with
+reverse engineering. Here-s a few tools which attempt to do that:
 - [[https://www.bipom.com/documents/dis51/d52manual.html][D51 - circa 2005]]
 - [[http://plit.de/asem-51/dis51.html][dis51 - circa 2003 and used by Jack Humbert to generate the .a51 disassemblies]]
 - [[https://sourceforge.net/p/sdcc/mailman/message/30408091/][mcs51-disasm.pl - circa 2013 and part of sdcc]]
 - [[https://github.com/8051Enthusiast/at51][at51 - actively developed]] (not a disassembler but a [[https://reverseengineering.stackexchange.com/questions/17601/reverse-engineering-8051-firmware][set of useful tools]])
 
-I've found ~mcs51-disasm.pl~ to be more useful than ~dis51~ and I haven't
+I=ve found ~mcs51-disasm.pl~ to be more useful than ~dis51~ and I haven=t
 attempted to use ~D51~. The ~mcs51-disasm.pl~ disassemblies can be found in the
 corresponding ~*.mcs51~ files.
 
@@ -319,12 +328,24 @@ names (also variable names but I haven't gotten that far). I've been naming
 functions there as I start to understand what they do (also thanks to Jack
 Humbert for already tackling many functions in ~main.c~.
 
+*** SSP over USB
+
 Probably the most important function I've found is the ~SSP_start~ function
 which actually does the SSP steps outlined in p. 49 of the [[file:../SH68F83V2.0.pdf][SH68F83 documentation]]
 so we can be fairly certain that's how the firmware updater utility is flashing
 new firmware although there is still much to learn in the details such as how it
 signals over usb for the flashing process to start.
 
+So far I've found that the ~updater~ utility somehow causes the SH68F83 to enter
+this SSP "bootloader" portion of the firmware above 0x3800 by doing a usb
+control transfer ~REQUEST_SET_CONFIGURATION~ for a configuration ~0x0305~ which
+isn't part of the Device's Descriptor. The device is then opened with a
+different Vendor ID and Product ID which corresponds to the device descriptor
+starting at ~0x3f2c~ which is in this "bootloader" portion of the firmware.
+
+I've found reading [[http://janaxelson.com/usbc.htm][Jan Axelson's USB Complete]] to be fairly useful for
+understanding the gritty details of the USB protocol which is really necessary
+for this project.
 
 *** Going forward
 I'm making slow but steady progress understanding the flashing portion of the
@@ -334,7 +355,6 @@ understand right now as how this happens will determine how safe it might be to
 flash untested code. I certainly wouldn't want to brick my keyboard and touchpad
 as fixing it at this point would require a new mainboard.
 
-As part of this I'm looking at rewriting the ~updater~ utility in python to
-better understand the usb portion of the update and make that process less
-opaque.
+As part of this I'm rewriting the ~updater~ utility in python to better
+understand the usb portion of the update and make that process less opaque.
 
