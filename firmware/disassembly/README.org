@@ -299,14 +299,14 @@ appears to be the JTAG device necessary to use the ICP function of the pretty
 much all Sino Wealth 8051 based MCUs including our SH68F83.
 
 *** Disassembly
-We-ll need good disassemblies of the hex files in order to get anywhere with
-reverse engineering. Here-s a few tools which attempt to do that:
+We'll need good disassemblies of the hex files in order to get anywhere with
+reverse engineering. Here's a few tools which attempt to do that:
 - [[https://www.bipom.com/documents/dis51/d52manual.html][D51 - circa 2005]]
 - [[http://plit.de/asem-51/dis51.html][dis51 - circa 2003 and used by Jack Humbert to generate the .a51 disassemblies]]
 - [[https://sourceforge.net/p/sdcc/mailman/message/30408091/][mcs51-disasm.pl - circa 2013 and part of sdcc]]
 - [[https://github.com/8051Enthusiast/at51][at51 - actively developed]] (not a disassembler but a [[https://reverseengineering.stackexchange.com/questions/17601/reverse-engineering-8051-firmware][set of useful tools]])
 
-I=ve found ~mcs51-disasm.pl~ to be more useful than ~dis51~ and I haven=t
+I've found ~mcs51-disasm.pl~ to be more useful than ~dis51~ and I haven't
 attempted to use ~D51~. The ~mcs51-disasm.pl~ disassemblies can be found in the
 corresponding ~*.mcs51~ files.
 
