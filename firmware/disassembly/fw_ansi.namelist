@@ -1,9 +1,11 @@
 [ROM]
 0x0036:WAIT12 
+0x11A3:actual_system_init?
 0x177c:?C?CLDPTR
 0x1795:?C?CLDOPTR
 0x17c2:?C?CSTOPTR
 0x17e4:?C?ICALL
+0x2402:usb_ep0_recv
 0x2600:WAIT18
 0x27AF:WAIT6
 0x1923:i2c_sendbyte
